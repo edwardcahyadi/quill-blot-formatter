@@ -32,15 +32,25 @@ var ResizeAction = function (_Action) {
     var _this = _possibleConstructorReturn(this, (ResizeAction.__proto__ || Object.getPrototypeOf(ResizeAction)).call(this, formatter));
 
     _this.onMouseDown = function (event) {
+      if (_this.isActive) {
+        return;
+      }
+      _this.source = 'mouse';
+      _this.isActive = true;
       _this.executeOnDown(event);
       document.addEventListener('mousemove', _this.onDrag);
       document.addEventListener('mouseup', _this.onMouseUp);
     };
 
-    _this.onPointerDown = function (event) {
+    _this.onTouchStart = function (event) {
+      if (_this.isActive) {
+        return;
+      }
+      _this.source = 'touch';
+      _this.isActive = true;
       _this.executeOnDown(event);
-      document.addEventListener('pointermove', _this.onDrag);
-      document.addEventListener('pointerup', _this.onPointerUp);
+      document.addEventListener('touchmove', _this.onDrag);
+      document.addEventListener('touchend', _this.onTouchEnd);
     };
 
     _this.executeOnDown = function (event) {
@@ -61,7 +71,11 @@ var ResizeAction = function (_Action) {
 
       var rect = target.getBoundingClientRect();
 
-      _this.dragStartX = event.clientX;
+      if (_this.source === 'mouse') {
+        _this.dragStartX = event.clientX;
+      } else {
+        _this.dragStartX = event.touches[0].clientX;
+      }
       _this.preDragWidth = rect.width;
       _this.targetRatio = rect.height / rect.width;
     };
@@ -76,7 +90,13 @@ var ResizeAction = function (_Action) {
         return;
       }
 
-      var deltaX = event.clientX - _this.dragStartX;
+      var deltaX = 0;
+      if (_this.source === 'mouse') {
+        deltaX = event.clientX - _this.dragStartX;
+      } else {
+        deltaX = event.touches[0].clientX - _this.dragStartX;
+      }
+
       var newWidth = 0;
 
       if (_this.dragHandle === _this.topLeftHandle || _this.dragHandle === _this.bottomLeftHandle) {
@@ -97,12 +117,14 @@ var ResizeAction = function (_Action) {
       _this.setCursor('');
       document.removeEventListener('mousemove', _this.onDrag);
       document.removeEventListener('mouseup', _this.onMouseUp);
+      _this.isActive = false;
     };
 
-    _this.onPointerUp = function () {
+    _this.onTouchEnd = function () {
       _this.setCursor('');
-      document.removeEventListener('pointermove', _this.onDrag);
-      document.removeEventListener('pointerup', _this.onMouseUp);
+      document.removeEventListener('touchmove', _this.onDrag);
+      document.removeEventListener('touchend', _this.onMouseUp);
+      _this.isActive = false;
     };
 
     _this.topLeftHandle = _this.createHandle('top-left', 'nwse-resize');
@@ -113,6 +135,8 @@ var ResizeAction = function (_Action) {
     _this.dragStartX = 0;
     _this.preDragWidth = 0;
     _this.targetRatio = 0;
+    _this.isActive = false;
+    _this.source = 'mouse';
     return _this;
   }
 
@@ -136,35 +160,6 @@ var ResizeAction = function (_Action) {
       this.formatter.overlay.removeChild(this.bottomLeftHandle);
     }
   }, {
-    key: 'isEventSupported',
-    value: function isEventSupported(eventName, element) {
-      // https://kangax.github.io/iseventsupported/
-      element = element || document.createElement(TAGNAMES[eventName] || 'div');
-      eventName = 'on' + eventName;
-
-      var isSupported = eventName in element;
-
-      if (!isSupported) {
-        // if it has no `setAttribute` (i.e. doesn't implement Node interface), try generic element
-        if (!element.setAttribute) {
-          element = document.createElement('div');
-        }
-        if (element.setAttribute && element.removeAttribute) {
-          element.setAttribute(eventName, '');
-          isSupported = typeof element[eventName] == 'function';
-
-          // if property was created, "remove it" (by setting value to `undefined`)
-          if (typeof element[eventName] != 'undefined') {
-            element[eventName] = undef;
-          }
-          element.removeAttribute(eventName);
-        }
-      }
-
-      element = null;
-      return isSupported;
-    }
-  }, {
     key: 'createHandle',
     value: function createHandle(position, cursor) {
       var box = document.createElement('div');
@@ -175,15 +170,8 @@ var ResizeAction = function (_Action) {
       if (this.formatter.options.resize.handleStyle) {
         Object.assign(box.style, this.formatter.options.resize.handleStyle);
       }
-
-      if (this.isEventSupported('pointerdown', box)) {
-        box.addEventListener('pointerdown', this.onPointerDown);
-        box.addEventListener('dragstart', function () {
-          return false;
-        });
-      } else {
-        box.addEventListener('mousedown', this.onMouseDown);
-      }
+      box.addEventListener('touchstart', this.onTouchStart);
+      box.addEventListener('mousedown', this.onMouseDown);
 
       return box;
     }

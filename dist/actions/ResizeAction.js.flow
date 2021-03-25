@@ -24,6 +24,8 @@ export default class ResizeAction extends Action {
     this.dragStartX = 0;
     this.preDragWidth = 0;
     this.targetRatio = 0;
+    this.isActive = false;
+    this.source = 'mouse';
   }
 
   onCreate() {
@@ -43,34 +45,6 @@ export default class ResizeAction extends Action {
     this.formatter.overlay.removeChild(this.bottomLeftHandle);
   }
 
-  isEventSupported(eventName, element) {
-    // https://kangax.github.io/iseventsupported/
-    element = element || document.createElement(TAGNAMES[eventName] || 'div');
-    eventName = 'on' + eventName;
-    
-    var isSupported = (eventName in element);
-    
-    if (!isSupported) {
-      // if it has no `setAttribute` (i.e. doesn't implement Node interface), try generic element
-      if (!element.setAttribute) {
-        element = document.createElement('div');
-      }
-      if (element.setAttribute && element.removeAttribute) {
-        element.setAttribute(eventName, '');
-        isSupported = typeof element[eventName] == 'function';
-
-        // if property was created, "remove it" (by setting value to `undefined`)
-        if (typeof element[eventName] != 'undefined') {
-          element[eventName] = undef;
-        }
-        element.removeAttribute(eventName);
-      }
-    }
-    
-    element = null;
-    return isSupported;
-  }
-
   createHandle(position: string, cursor: string): HTMLElement {
     const box = document.createElement('div');
     box.classList.add(this.formatter.options.resize.handleClassName);
@@ -80,13 +54,8 @@ export default class ResizeAction extends Action {
     if (this.formatter.options.resize.handleStyle) {
       Object.assign(box.style, this.formatter.options.resize.handleStyle);
     }
-
-    if (this.isEventSupported('pointerdown', box)) {
-      box.addEventListener('pointerdown', this.onPointerDown);
-      box.addEventListener('dragstart', () => false);
-    } else {
-      box.addEventListener('mousedown', this.onMouseDown);
-    }
+    box.addEventListener('touchstart', this.onTouchStart);
+    box.addEventListener('mousedown', this.onMouseDown);
 
     return box;
   }
@@ -123,15 +92,25 @@ export default class ResizeAction extends Action {
   }
 
   onMouseDown = (event: MouseEvent) => {
+    if (this.isActive) {
+      return;
+    }
+    this.source = 'mouse';
+    this.isActive = true;
     this.executeOnDown(event);
     document.addEventListener('mousemove', this.onDrag);
     document.addEventListener('mouseup', this.onMouseUp);
   };
 
-  onPointerDown = (event: PointerEvent) => {
+  onTouchStart = (event: PointerEvent) => {
+    if (this.isActive) {
+      return;
+    }
+    this.source = 'touch';
+    this.isActive = true;
     this.executeOnDown(event);
-    document.addEventListener('pointermove', this.onDrag);
-    document.addEventListener('pointerup', this.onPointerUp);
+    document.addEventListener('touchmove', this.onDrag);
+    document.addEventListener('touchend', this.onTouchEnd);
   };
 
   executeOnDown = (event) => {
@@ -152,7 +131,11 @@ export default class ResizeAction extends Action {
 
     const rect = target.getBoundingClientRect();
 
-    this.dragStartX = event.clientX;
+    if (this.source === 'mouse') {
+      this.dragStartX = event.clientX;
+    } else {
+      this.dragStartX = event.touches[0].clientX;
+    }
     this.preDragWidth = rect.width;
     this.targetRatio = rect.height / rect.width;
   }
@@ -167,7 +150,13 @@ export default class ResizeAction extends Action {
       return;
     }
 
-    const deltaX = event.clientX - this.dragStartX;
+    let deltaX = 0;
+    if (this.source === 'mouse') {
+      deltaX = event.clientX - this.dragStartX;
+    } else {
+      deltaX = event.touches[0].clientX - this.dragStartX;
+    }
+
     let newWidth = 0;
 
     if (this.dragHandle === this.topLeftHandle || this.dragHandle === this.bottomLeftHandle) {
@@ -188,11 +177,13 @@ export default class ResizeAction extends Action {
     this.setCursor('');
     document.removeEventListener('mousemove', this.onDrag);
     document.removeEventListener('mouseup', this.onMouseUp);
+    this.isActive = false;
   };
 
-  onPointerUp = () => {
+  onTouchEnd = () => {
     this.setCursor('');
-    document.removeEventListener('pointermove', this.onDrag);
-    document.removeEventListener('pointerup', this.onMouseUp);
+    document.removeEventListener('touchmove', this.onDrag);
+    document.removeEventListener('touchend', this.onMouseUp);
+    this.isActive = false;
   }
 }
