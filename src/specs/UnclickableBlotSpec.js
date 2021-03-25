@@ -94,7 +94,7 @@ export default class UnclickableBlotSpec extends BlotSpec {
       });
   };
 
-  onMouseEnter = (event: MouseEvent) => {
+  onMouseEnter = (event) => {
     const unclickable = event.target;
     if (!(unclickable instanceof HTMLElement)) {
       return;

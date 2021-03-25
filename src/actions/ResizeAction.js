@@ -1,3 +1,4 @@
+/* eslint-disable linebreak-style */
 // @flow
 
 import Action from './Action';
@@ -42,6 +43,34 @@ export default class ResizeAction extends Action {
     this.formatter.overlay.removeChild(this.bottomLeftHandle);
   }
 
+  isEventSupported(eventName, element) {
+    // https://kangax.github.io/iseventsupported/
+    element = element || document.createElement(TAGNAMES[eventName] || 'div');
+    eventName = 'on' + eventName;
+    
+    var isSupported = (eventName in element);
+    
+    if (!isSupported) {
+      // if it has no `setAttribute` (i.e. doesn't implement Node interface), try generic element
+      if (!element.setAttribute) {
+        element = document.createElement('div');
+      }
+      if (element.setAttribute && element.removeAttribute) {
+        element.setAttribute(eventName, '');
+        isSupported = typeof element[eventName] == 'function';
+
+        // if property was created, "remove it" (by setting value to `undefined`)
+        if (typeof element[eventName] != 'undefined') {
+          element[eventName] = undef;
+        }
+        element.removeAttribute(eventName);
+      }
+    }
+    
+    element = null;
+    return isSupported;
+  }
+
   createHandle(position: string, cursor: string): HTMLElement {
     const box = document.createElement('div');
     box.classList.add(this.formatter.options.resize.handleClassName);
@@ -52,7 +81,12 @@ export default class ResizeAction extends Action {
       Object.assign(box.style, this.formatter.options.resize.handleStyle);
     }
 
-    box.addEventListener('mousedown', this.onMouseDown);
+    if (this.isEventSupported('pointerdown', box)) {
+      box.addEventListener('pointerdown', this.onPointerDown);
+      box.addEventListener('dragstart', () => false);
+    } else {
+      box.addEventListener('mousedown', this.onMouseDown);
+    }
 
     return box;
   }
@@ -89,6 +123,18 @@ export default class ResizeAction extends Action {
   }
 
   onMouseDown = (event: MouseEvent) => {
+    this.executeOnDown(event);
+    document.addEventListener('mousemove', this.onDrag);
+    document.addEventListener('mouseup', this.onMouseUp);
+  };
+
+  onPointerDown = (event: PointerEvent) => {
+    this.executeOnDown(event);
+    document.addEventListener('pointermove', this.onDrag);
+    document.addEventListener('pointerup', this.onPointerUp);
+  };
+
+  executeOnDown = (event) => {
     if (!(event.target instanceof HTMLElement)) {
       return;
     }
@@ -109,12 +155,9 @@ export default class ResizeAction extends Action {
     this.dragStartX = event.clientX;
     this.preDragWidth = rect.width;
     this.targetRatio = rect.height / rect.width;
+  }
 
-    document.addEventListener('mousemove', this.onDrag);
-    document.addEventListener('mouseup', this.onMouseUp);
-  };
-
-  onDrag = (event: MouseEvent) => {
+  onDrag = (event) => {
     if (!this.formatter.currentSpec) {
       return;
     }
@@ -146,4 +189,10 @@ export default class ResizeAction extends Action {
     document.removeEventListener('mousemove', this.onDrag);
     document.removeEventListener('mouseup', this.onMouseUp);
   };
+
+  onPointerUp = () => {
+    this.setCursor('');
+    document.removeEventListener('pointermove', this.onDrag);
+    document.removeEventListener('pointerup', this.onMouseUp);
+  }
 }

@@ -23,6 +23,7 @@ export default class BlotFormatter {
     this.actions = [];
     this.overlay = document.createElement('div');
     this.overlay.classList.add(this.options.overlay.className);
+    this.overlay.onkeydown = ev => ev.preventDefault();
     if (this.options.overlay.style) {
       Object.assign(this.overlay.style, this.options.overlay.style);
     }

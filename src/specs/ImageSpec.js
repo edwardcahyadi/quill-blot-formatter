@@ -23,7 +23,7 @@ export default class ImageSpec extends BlotSpec {
     this.img = null;
   }
 
-  onClick = (event: MouseEvent) => {
+  onClick = (event) => {
     const el = event.target;
     if (!(el instanceof HTMLElement) || el.tagName !== 'IMG') {
       return;

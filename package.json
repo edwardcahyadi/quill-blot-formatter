@@ -1,18 +1,23 @@
 {
   "name": "quill-blot-formatter",
   "version": "1.0.4",
-  "description": "a module for the Quill text editor to allow blots to be reformatted. Built in formatters: resize and realign. Built in blot support: images and iframe videos.",
+  "description": "a module for the Quill text editor to allow blots to be reformatted. Built in formatters: resize and realign. Built in blot support: images and iframe videos. Heavily inspired by https://github.com/juandjara/quill-blot-formatter-mobile.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "homepage": "https://github.com/Fandom-OSS/quill-blot-formatter",
+  "homepage": "https://github.com/edwardcahyadi/quill-blot-formatter",
   "bugs": {
-    "url": "https://github.com/Fandom-OSS/quill-blot-formatter/issues"
+    "url": "https://github.com/edwardcahyadi/quill-blot-formatter/issues"
   },
   "contributors": [
     {
       "name": "Nelson Monterroso",
       "email": "nmonterroso@users.noreply.github.com",
       "url": "https://github.com/nmonterroso"
+    },
+    {
+      "name": "Edward Cahyadi",
+      "email": "edwardcahyadi@users.noreply.github.com",
+      "url": "https://github.com/edwardcahyadi"
     }
   ],
   "repository": {
